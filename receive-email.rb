@@ -1,9 +1,11 @@
+#!/usr/bin/env ruby
 #Email to Jekyll script
 #(c)2011 Ted Kulp <ted@tedkulp.com>
 #MIT license -- Have fun
 #Most definitely a work in progress
 
 #Mail is an awesome gem. Install it.
+require 'rubygems'
 require 'mail'
 
 #Change me
@@ -17,10 +19,10 @@ message = $stdin.read
 exit if message.nil? or message.strip.empty?
 
 #Parse it, baby
-mail = Mail.read(message)
+mail = Mail.new(message)
 
-markup_extensions = {html: 'html', markdown: 'markdown', md: 'markdown', textile: 'textile', txt: 'textile'}
-keyvals = {tags: '', markup: 'html', slug: '', draft: false, layout: 'post'}
+markup_extensions = {:html => 'html', :markdown => 'markdown', :md => 'markdown', :textile => 'textile', :txt => 'textile'}
+keyvals = {:tags => '', :markup => 'html', :slug => '', :draft => false, :layout => 'post'}
 subject = mail.subject
 
 #Regex to grab all the of ((key: value)) sets in the subject
