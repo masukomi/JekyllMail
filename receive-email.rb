@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# -*- coding: utf-8 -*- #specify UTF-8 (unicode) characters
+
 #Email to Jekyll script
 #(c)2011 Ted Kulp <ted@tedkulp.com>
 #MIT license -- Have fun
@@ -7,10 +9,14 @@
 #Mail is an awesome gem. Install it.
 require 'rubygems'
 require 'mail'
+require 'nokogiri'
 
 #Change me
 path_to_posts = '/Users/tedkulp/Dropbox/tedkulp.com/_posts'
 path_to_drafts = '/Users/tedkulp/Dropbox/tedkulp.com/_drafts'
+
+path_to_posts = '/home/tedkulp/Dropbox/tedkulp.com/_posts'
+path_to_drafts = '/home/tedkulp/Dropbox/tedkulp.com/_drafts'
 
 #Grab message that was piped
 message = $stdin.read
@@ -73,6 +79,13 @@ end
 #If we have no body after all that, bail
 exit if body.strip.empty?
 
+#If it's html, run it through nokogiri to make sure it's clean
+if keyvals[:markup] == 'html'
+	#body.gsub!(/[”“]/, '"')
+	#body.gsub!(/[‘’]/, "'")
+	body = Nokogiri::HTML::DocumentFragment.parse(body.strip).to_html
+end
+
 slug = subject.gsub(/[^[:alnum:]]+/, '-').downcase.strip.gsub(/\A\-+|\-+\z/, '')
 time = Time.now
 name = "%02d-%02d-%02d-%s.%s" % [time.year, time.month, time.day, slug, markup_extensions[keyvals[:markup].to_sym]]
@@ -83,7 +96,7 @@ exit unless File.writable?(path_to_posts)
 open(filename, 'w') do |str|
 	str << "---\n"
 	str << "layout: #{keyvals[:layout]}\n"
-	str << "title: #{subject}\n"
+	str << "title: '#{subject}'\n"
 	str << "date: %02d-%02d-%02d %02d:%02d:%02d\n" % [time.year, time.month, time.day, time.hour, time.min, time.sec]
 	unless keyvals[:tags].empty?
 		str << "tags: \n"
