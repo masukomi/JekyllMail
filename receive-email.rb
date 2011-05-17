@@ -43,6 +43,9 @@ end
 #want for the post's subject
 subject = subject.gsub(tags_regex, '').strip
 
+#If the draft keyval has anything over than false, use the drafts folder instead
+path_to_posts = path_to_drafts if keyvals[:draft] != false
+
 #If there is no working subject, bail
 exit if subject.empty?
 
