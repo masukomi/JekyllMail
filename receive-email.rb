@@ -43,6 +43,9 @@ end
 #want for the post's subject
 subject = subject.gsub(tags_regex, '').strip
 
+#Now remove any hash tags (like from Instagram)
+subject = subject.gsub(/ \#\w+/, '').strip
+
 #If the draft keyval has anything over than false, use the drafts folder instead
 path_to_posts = path_to_drafts if keyvals[:draft] != false
 
