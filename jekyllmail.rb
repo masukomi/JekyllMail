@@ -76,9 +76,15 @@ emails.each do | mail |
 	# if it doesn't contain the secret we can assume it to be spam
 	next unless keyvals[:secret] == prefs[:secret]
 
+	keyvals.delete(:secret) # we don't want that in the post's Frontmatter
 
+	
+	#TODO figure out a better way to integrate hashtag 
+	# support or removal: 
+	# - Maybe they should be converted to tags?
+	# - Maybe they should be killed?
 	#Now remove any hash tags (like from Instagram)
-	subject = subject.gsub(/ \#\w+/, '').strip
+	#title = title.gsub(/ \#\w+/, '').strip
 
 	body = ''
 
@@ -130,13 +136,18 @@ emails.each do | mail |
 
 	open(draft_filename, 'w') do |str|
 		str << "---\n"
-		str << "layout: #{keyvals[:layout]}\n"
 		str << "title: '#{title}'\n"
 		str << "date: %02d-%02d-%02d %02d:%02d:%02d\n" % [time.year, time.month, time.day, time.hour, time.min, time.sec]
-		unless keyvals[:tags].empty?
-			str << "tags: \n"
-			keyvals[:tags].split(',').each do |string|
-				str << "- " + string.strip + "\n"
+		keyvals.keys.sort.each do |key|
+			if key != :tags  and key != :slug
+				str << "#{key}: #{keyvals[key]}\n"
+			elsif key == :tags
+				unless keyvals[:tags].empty?
+					str << "tags: \n"
+					keyvals[:tags].split(',').each do |string|
+						str << "- " + string.strip + "\n"
+					end
+				end
 			end
 		end
 		str << "---\n"
