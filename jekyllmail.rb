@@ -22,6 +22,7 @@ require 'fileutils'
 prefs = {
 	:path_to_posts => `git config jekyllmail.postsDir`.chomp,
 	:path_to_drafts => `git config jekyllmail.draftsDir`.chomp,
+	:path_to_images => `git config jekyllmail.imagesDir`.chomp,
 	:pop_server => `git config jekyllmail.popServer`.chomp,
 	:pop_user => `git config jekyllmail.popUser`.chomp,
 	:pop_password => `git config jekyllmail.popPassword`.chomp,
@@ -77,6 +78,9 @@ emails.each do | mail |
 	next unless keyvals[:secret] == prefs[:secret]
 
 	keyvals.delete(:secret) # we don't want that in the post's Frontmatter
+	slug = title.gsub(/[^[:alnum:]]+/, '-').downcase.strip.gsub(/\A\-+|\-+\z/, '')
+	time = Time.now
+	name = "%02d-%02d-%02d-%s.%s" % [time.year, time.month, time.day, slug, markup_extensions[keyvals[:markup].to_sym]]
 
 	
 	#TODO figure out a better way to integrate hashtag 
@@ -103,6 +107,22 @@ emails.each do | mail |
 			end
 		end
 
+		mail.attachments.each do |attachment|
+			if (attachment.content_type.start_with?('image/'))
+				fn = attachment.filename
+				images_dir = prefs[:path_to_images] + ("/%02d/%02d/%02d" % [time.year, time.month, time.day]) + '/'
+				unless Dir.exists?(images_dir)
+					FileUtils.mkdir_p(images_dir)
+				end
+				begin
+					File.open( images_dir + fn, "w+b", 0644 ) { |f| f.write attachment.body.decoded }
+				rescue Exception => e
+					puts "Unable to save data for #{fn} because #{e.message}"
+				end
+			end
+		end
+				
+
 		#If the markup isn't html, try and use the
 		#text if it exists. Anything else, use the html
 		#version
@@ -126,9 +146,6 @@ emails.each do | mail |
 		body = Nokogiri::HTML::DocumentFragment.parse(body.strip).to_html
 	end
 
-	slug = subject.gsub(/[^[:alnum:]]+/, '-').downcase.strip.gsub(/\A\-+|\-+\z/, '')
-	time = Time.now
-	name = "%02d-%02d-%02d-%s.%s" % [time.year, time.month, time.day, slug, markup_extensions[keyvals[:markup].to_sym]]
 	draft_filename = prefs[:path_to_drafts] + '/' + name
 	post_filename = prefs[:path_to_posts] + '/' + name
 
@@ -157,6 +174,7 @@ emails.each do | mail |
 	unless keyvals[:draft] == 'true'
 		FileUtils.mv(draft_filename, post_filename)
 	end
+
 
 end
 
