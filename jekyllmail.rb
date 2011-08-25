@@ -29,6 +29,7 @@ prefs = {
 	:secret => `git config jekyllmail.secret`.chomp,
 		# secret must appear in the subject line or the message will be deleted unread
 	:markup => `git config jekyllmail.defaultMarkup`.chomp,
+	:site_url => `git config jekyllmail.siteUrl`.chomp #assumes images dir lives directly under this
 }
 
 
@@ -91,7 +92,8 @@ emails.each do | mail |
 	#title = title.gsub(/ \#\w+/, '').strip
 
 	body = ''
-
+	
+	images_needing_replacement = {} #maps filename to public url file will be served from
 	#Is this multipart?
 	if mail.multipart?
 		html_part = -1
@@ -111,6 +113,7 @@ emails.each do | mail |
 			if (attachment.content_type.start_with?('image/'))
 				fn = attachment.filename
 				images_dir = prefs[:path_to_images] + ("/%02d/%02d/%02d" % [time.year, time.month, time.day]) + '/'
+				images_needing_replacement[fn] = "#{prefs[:site_url]}/#{images_dir}/#{fn}"
 				unless Dir.exists?(images_dir)
 					FileUtils.mkdir_p(images_dir)
 				end
@@ -144,6 +147,21 @@ emails.each do | mail |
 		#body.gsub!(/[”“]/, '"')
 		#body.gsub!(/[‘’]/, "'")
 		body = Nokogiri::HTML::DocumentFragment.parse(body.strip).to_html
+	end
+	if (images_needing_replacement.length() > 0)
+		#TODO break this out into a method for testability
+		images_needing_replacement.each do | filename, path |
+			if keyvals[:markup] == 'markdown'
+				body.gsub!(/(\(|\]:\s|<)#{Regexp.escape(filename)}/, "#{$1}#{path}")
+			elsif keyvals[:markup] == 'textile'
+				body.gsub!(/!#{Regexp.escape(filename)}(!|\()/, "!#{path}#{$1}")
+			elsif keyvals[:markup] == 'html'
+				body.gsub!(/(src=(?:'|")|href=(?:'|"))#{Regexp.escape(filename)}/i, "#{$1}#{path}")
+				# WARNING: won't address urls in css
+				# Is case insensitive so it won't differentiatee FOO.jpg from foo.jpg or FoO.jpg
+				# people shouldn't be using the same name for different files anyway. :P
+			end
+		end
 	end
 
 	draft_filename = prefs[:path_to_drafts] + '/' + name

@@ -32,7 +32,9 @@ Image attachments will be extracted by JekyllMail and placed in dated directory 
 
 For example If you attached flag.jpg to a post sent on July 4th 2012 it would be stored in <images_dir>/2012/07/04/flag.jpg
 
-*Eventually* JekyllMail will look for the image tags in your document that reference the image filename and update them to point to the correct published file path. For example it would convert \!\[alt text\]\(flag.jpg\) in a Markdown document to  \!\[alt text\]\(http://path/to/images/dir/2012/07/04/flag.jpg\). **But** for the moment you're going to have to manually reference the easily predictable location where it will be stored. 
+JekyllMail will look for the image tags in your document that reference the image filename and update them to point to the correct published file path. For example it will convert \!\[alt text\]\(flag.jpg\) in a Markdown document to  \!\[alt text\]\(http://path/to/images/dir/2012/07/04/flag.jpg\). Textile and HTML posts are also supported. 
+
+In pracitce this simply means that if you insert a \!\[alt text\]\(flag.jpg\) tag and attach an image named flag.jpg to the same email everything will show up as expected in your post even though JekyllMail has moved that image off to a dated subdirectory (just like the post).
 
 ## Configuration ##
 If you're using Jekyll you're using git. JekyllMail is configured via its own section of you global [git config](http://kernel.org/pub/software/scm/git/docs/git-config.html).
@@ -46,19 +48,22 @@ If you're using Jekyll you're using git. JekyllMail is configured via its own se
 		popUser = jekyllmail@example.com
 		secret = easy-to-remember-hard-to-guess
 		defaultMarkup = markdown
+		siteUrl = http://www.example.com
 
 You can add these to your ~/.gitconfig by editing it directly or by commands like the following: 
 
 	git config --global add jekyllmail.postsDir /path/to/my_jekyll_site/source/_posts
 
-Please note that paths must *not* end with a slash.
-Your popUser doesn't have to be an e-mail address. It might just be "jekyllmail", or whatever username you've chosen for the e-mail account. It all depends on how your server is configured. 
+Please note that paths and urls must *not* end with a slash. Also, JekyllMail assumes that your images directory lives directly under your siteUrl. E.g. http://www.example.com/images
+
+
+Your popUser doesn't have to be an e-mail address. It might just be "jekyllmail", or whatever username you've chosen for the e-mail account. It all depends on how your mail server is configured. 
 
 ### Known Issues ###
 Check out the [Issues page](https://github.com/masukomi/JekyllMail/issues) on Github for the current list of known issues. 
 
 ## Credit where credit is due ##
-JekyllMail was based on a [post & gist](http://tedkulp.com/2011/05/18/send-email-to-jekyll/) by [Ted Kulp](http://tedkulp.com/). He did all the heavy lifting. JekyllMail is simply a more generic version that speaks POP3, is more spam resistent, and should work for anyone.
+JekyllMail was based on a [post & gist](http://tedkulp.com/2011/05/18/send-email-to-jekyll/) by [Ted Kulp](http://tedkulp.com/). JekyllMail expands upon his original idea, adding POP3, spam resistance, and image handling. It should work on any OS X or Linux system.
 
 ## License ##
 JekyllMail is distributed under the [MIT License](http://www.opensource.org/licenses/mit-license.php).
