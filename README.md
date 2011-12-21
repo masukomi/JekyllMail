@@ -22,7 +22,7 @@ Your e-mail can be formatted in Markdown, Textile, or HTML.
 ### Subject Metadata ###
 There are a handful of keys that JekyllMail is specifically looking for. All of these are optional except "secret":
 
-* draft: defaults to false. Set this to "true" if you want this post to be saved in the _drafts folder.
+* published: defaults to true. Set this to "false" if you want this post to be saved in the _drafts folder.
 * markup: can be: html, markdown, md, textile, txt (textile)
 * tags: expects a comma separated list of tags for your post
 * slug: the "slug" for the file-name. E.g. yyyy-mm-dd-*slug*.extension 

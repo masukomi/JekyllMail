@@ -54,7 +54,7 @@ end
 emails.each do | mail |
 
 	markup_extensions = {:html => 'html', :markdown => 'markdown', :md => 'markdown', :textile => 'textile', :txt => 'textile'}
-	keyvals = {:tags => '', :markup => prefs[:markup], :slug => '', :draft => false, :layout => 'post'}
+	keyvals = {:tags => '', :markup => prefs[:markup], :slug => '', :published => true, :layout => 'post'}
 	subject = mail.subject
 
 	#If there is no working subject, bail
@@ -171,7 +171,7 @@ emails.each do | mail |
 		str << body
 	end
 	# if this isn't a draft move it over to the posts directory
-	unless keyvals[:draft] == 'true'
+	unless keyvals[:published] == 'false'
 		FileUtils.mv(draft_filename, post_filename)
 	end
 
