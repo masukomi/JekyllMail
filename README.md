@@ -32,20 +32,28 @@ Image attachments will be extracted by JekyllMail and placed in dated directory 
 
 For example If you attached flag.jpg to a post sent on July 4th 2012 it would be stored in <images_dir>/2012/07/04/flag.jpg
 
-*Eventually* JekyllMail will look for the image tags in your document that reference the image filename and update them to point to the correct published file path. For example it would convert \!\[alt text\]\(flag.jpg\) in a Markdown document to  \!\[alt text\]\(http://path/to/images/dir/2012/07/04/flag.jpg\). **But** for the moment you're going to have to manually reference the easily predictable location where it will be stored. 
+
+JekyllMail will look for the image tags in your document that reference the image filename and update them to point to the correct published file path. For example it will convert \!\[alt text\]\(flag.jpg\) in a Markdown document to  \!\[alt text\]\(http://path/to/images/dir/2012/07/04/flag.jpg\). Textile and HTML posts are also supported. 
+
+In practice this simply means that if you insert a \!\[alt text\]\(flag.jpg\) tag and attach an image named flag.jpg to the same email everything will show up as expected in your post even though JekyllMail has moved that image off to a dated subdirectory (just like the post).
 
 ## Configuration ##
 If you're using Jekyll you're using git. JekyllMail is configured via its own section of you global [git config](http://kernel.org/pub/software/scm/git/docs/git-config.html).
 
 	[jekyllmail]
-		postsDir = /path/to/my\_jekyll\_site/source/_posts
-		draftsDir = /path/to/my\_jekyll\_site/source/_drafts
-		imagesDir = /path/to/my\_jekyll_site/images
+		jekyllRepo = /path/to/my_jekyll_repo
+		postsDir = /path/to/my_jekyll_repo/source/_posts
+		draftsDir = /path/to/my_jekyll_repo/source/_drafts
+		imagesDir = /path/to/my_jekyll_repo/images
 		popServer = mail.example.com
 		popPassword = 1x2x3fdc3
 		popUser = jekyllmail@example.com
 		secret = easy-to-remember-hard-to-guess
 		defaultMarkup = markdown
+		siteUrl = http://www.example.com
+		commitAfterSave = true
+		pushAfterSave = origin master
+
 
 You can add these to your ~/.gitconfig by editing it directly or by commands like the following: 
 
