@@ -10,172 +10,243 @@
 
 # TODO
 # error handling:
-# - complain if any of the required prefs are not defined
+# - complain if any of the required blog are not defined
 
 require 'rubygems'
+require 'yaml'
 require 'net/pop'
 require 'mail'
 require 'nokogiri'
 require 'fileutils'
-
-#Change me
-prefs = {
-	:path_to_posts => `git config jekyllmail.postsDir`.chomp,
-	:path_to_drafts => `git config jekyllmail.draftsDir`.chomp,
-	:path_to_images => `git config jekyllmail.imagesDir`.chomp,
-	:pop_server => `git config jekyllmail.popServer`.chomp,
-	:pop_user => `git config jekyllmail.popUser`.chomp,
-	:pop_password => `git config jekyllmail.popPassword`.chomp,
-	:secret => `git config jekyllmail.secret`.chomp,
-		# secret must appear in the subject line or the message will be deleted unread
-	:markup => `git config jekyllmail.defaultMarkup`.chomp,
-}
+#require 'grit'
+#include Grit
 
 
-Mail.defaults do
-  retriever_method :pop3, :address    => prefs[:pop_server],
-                          :port       => 995,
-                          :user_name  => prefs[:pop_user],
-                          :password   => prefs[:pop_password],
-                          :enable_ssl => true
-end
+DEBUG = false
 
-emails = Mail.all
-
-if (emails.length == 0 )
-	puts "No Emails found"
-	exit 0
-else
-	puts "#{emails.length} email(s) found"
-end
+#JEKYLLMAIL_USER= Actor.from_string("JekyllMail Script <jekyllmail@masukomi.org>")
 
 
+directory_keys = ['jekyll_repo', 'source_dir', 'site_url']
+yaml = YAML::load(File.open('_config.yml'))
+blogs = yaml['blogs']
+blogs.each do | blog | 
+	# the blog hash contains
+	# jekyll_repo => absolute path to the root of the jekyll repo
+	# source_dir => absolute path to the directory containing _posts, _drafts, and images
+	# pop_server => domain name
+	# pop_user => username
+	# pop_password => plaintext password
+	# secret => the secret that must appear in the email subject
+	# markup => markup or textile
+	# site_url => the http://.... url to the root of the public web site
+	# commit_after_save => boolean
+	# git_branch => the name of the git branch to commit to
+	## git_branch is Unused until we get Grit working correctly
 
-emails.each do | mail |
-
-	markup_extensions = {:html => 'html', :markdown => 'markdown', :md => 'markdown', :textile => 'textile', :txt => 'textile'}
-	keyvals = {:tags => '', :markup => prefs[:markup], :slug => '', :published => true, :layout => 'post'}
-	subject = mail.subject
-
-	#If there is no working subject, bail
-	next if subject.empty?
-	
-	(title, raw_data) = subject.split(/\|\|/) # two pipes separate subject from data
-	title.gsub!(/^\s+|\s+$/, '')
-	unless raw_data.nil?
-		datums = raw_data.split('/')
-		datums.each do |datum|
-			next if datum.nil?
-			(key, val) = datum.split(/:\s?/)
-			key.gsub!(/\s+/, '')
-			val.gsub!(/\s+$/, '')
-			keyvals[key.to_sym] = val
-		end
+	directory_keys.each do | key |
+		blog[key].sub!(/\/$/, '') # remove any trailing slashes from directory paths
+		puts "#{key}: #{blog[key]}"
 	end
-	
-	
-	# if it doesn't contain the secret we can assume it to be spam
-	next unless keyvals[:secret] == prefs[:secret]
+	blog['images_dir'] ||= 'images' #relative to site_url
+	blog['posts_dir'] ||= '_posts' #relative to source_dir
 
-	keyvals.delete(:secret) # we don't want that in the post's Frontmatter
-	slug = title.gsub(/[^[:alnum:]]+/, '-').downcase.strip.gsub(/\A\-+|\-+\z/, '')
-	time = Time.now
-	name = "%02d-%02d-%02d-%s.%s" % [time.year, time.month, time.day, slug, markup_extensions[keyvals[:markup].to_sym]]
 
-	
-	#TODO figure out a better way to integrate hashtag 
-	# support or removal: 
-	# - Maybe they should be converted to tags?
-	# - Maybe they should be killed?
-	#Now remove any hash tags (like from Instagram)
-	#title = title.gsub(/ \#\w+/, '').strip
+	Mail.defaults do
+	  retriever_method :pop3, :address    => blog['pop_server'],
+							  :port       => 995,
+							  :user_name  => blog['pop_user'],
+							  :password   => blog['pop_password'],
+							  :enable_ssl => true
+	end
 
-	body = ''
+	emails = Mail.all
 
-	#Is this multipart?
-	if mail.multipart?
-		html_part = -1
-		txt_part = -1
-
-		#Figure out which part is html and which
-		#is text
-		mail.parts.each_with_index do |p,idx|
-			if p.content_type.start_with?('text/html')
-				html_part = idx
-			elsif p.content_type.start_with?('text/plain')
-				txt_part = idx
-			end
-		end
-
-		mail.attachments.each do |attachment|
-			if (attachment.content_type.start_with?('image/'))
-				fn = attachment.filename
-				images_dir = prefs[:path_to_images] + ("/%02d/%02d/%02d" % [time.year, time.month, time.day]) + '/'
-				unless Dir.exists?(images_dir)
-					FileUtils.mkdir_p(images_dir)
-				end
-				begin
-					File.open( images_dir + fn, "w+b", 0644 ) { |f| f.write attachment.body.decoded }
-				rescue Exception => e
-					puts "Unable to save data for #{fn} because #{e.message}"
-				end
-			end
-		end
-				
-
-		#If the markup isn't html, try and use the
-		#text if it exists. Anything else, use the html
-		#version
-		if txt_part > -1 and keyvals[:markup] != 'html'
-			body = mail.parts[txt_part].body.decoded
-		elsif html_part > -1
-			body = mail.parts[html_part].body.decoded
-		end
+	if (emails.length == 0 )
+		puts "No Emails found" if DEBUG
+		exit 0
 	else
-		#Just grab the body no matter what it is
-		body = mail.body.decoded
+		puts "#{emails.length} email(s) found" if DEBUG
 	end
 
-	#If we have no body after all that, bail
-	exit if body.strip.empty?
 
-	#If it's html, run it through nokogiri to make sure it's clean
-	if keyvals[:markup] == 'html'
-		#body.gsub!(/[”“]/, '"')
-		#body.gsub!(/[‘’]/, "'")
-		body = Nokogiri::HTML::DocumentFragment.parse(body.strip).to_html
-	end
 
-	draft_filename = prefs[:path_to_drafts] + '/' + name
-	post_filename = prefs[:path_to_posts] + '/' + name
+	emails.each do | mail |
+		files_to_commit = []
+		markup_extensions = {:html => 'html', :markdown => 'markdown', :md => 'markdown', :textile => 'textile', :txt => 'textile'}
+		keyvals = {:tags => '', :markup => blog['markup'], :slug => '', :published => true, :layout => 'post'}
+		subject = mail.subject
+		puts "processing email with subject: #{subject}" if DEBUG
 
-	exit unless File.writable?(prefs[:path_to_posts])
+		#If there is no working subject, bail
+		next if subject.empty?
+		
+		# <subject> || key: value / key: value / key: value, value, value
+		(title, raw_data) = subject.split(/\|\|/) # two pipes separate subject from data
+		title.gsub!(/^\s+|\s+$/, '')
+		unless raw_data.nil?
+			datums = raw_data.split('/')
+			datums.each do |datum|
+				next if datum.nil?
+				(key, val) = datum.split(/:\s?/)
+				key.gsub!(/\s+/, '')
+				val.gsub!(/\s+$/, '')
+				keyvals[key.to_sym] = val
+			end
+		end
+		
+		
+		# if it doesn't contain the secret we can assume it to be spam
+		next unless keyvals[:secret] == blog['secret']
 
-	open(draft_filename, 'w') do |str|
-		str << "---\n"
-		str << "title: '#{title}'\n"
-		str << "date: %02d-%02d-%02d %02d:%02d:%02d\n" % [time.year, time.month, time.day, time.hour, time.min, time.sec]
-		keyvals.keys.sort.each do |key|
-			if key != :tags  and key != :slug
-				str << "#{key}: #{keyvals[key]}\n"
-			elsif key == :tags
-				unless keyvals[:tags].empty?
-					str << "tags: \n"
-					keyvals[:tags].split(',').each do |string|
-						str << "- " + string.strip + "\n"
+		keyvals.delete(:secret) # we don't want that in the post's Frontmatter
+		slug = title.gsub(/[^[:alnum:]]+/, '-').downcase.strip.gsub(/\A\-+|\-+\z/, '')
+		time = Time.now
+		name = "%02d-%02d-%02d-%s.%s" % [time.year, time.month, time.day, slug, markup_extensions[keyvals[:markup].to_sym]]
+
+		
+		#TODO figure out a better way to integrate hashtag 
+		# support or removal: 
+		# - Maybe they should be converted to tags?
+		# - Maybe they should be killed?
+		#Now remove any hash tags (like from Instagram)
+		#title = title.gsub(/ \#\w+/, '').strip
+
+		body = ''
+		
+		images_needing_replacement = {} #maps filename to public url file will be served from
+		#Is this multipart?
+		if mail.multipart?
+			html_part = -1
+			txt_part = -1
+
+			#Figure out which part is html and which
+			#is text
+			mail.parts.each_with_index do |p,idx|
+				if p.content_type.start_with?('text/html')
+					html_part = idx
+				elsif p.content_type.start_with?('text/plain')
+					txt_part = idx
+				end
+			end
+
+			mail.attachments.each do |attachment|
+				if (attachment.content_type.start_with?('image/'))
+					fn = attachment.filename
+					images_dir = blog['images_dir'] + ("/%02d/%02d/%02d" % [time.year, time.month, time.day])
+					absolute_images_dir = "#{blog['source_dir']}/#{images_dir}"
+					puts "absolute_images_dir: #{absolute_images_dir}"
+					images_needing_replacement[fn] = "#{blog['site_url']}/#{images_dir}/#{fn}"
+					puts "image url: #{images_needing_replacement[fn]}"
+					unless Dir.exists?(absolute_images_dir)
+						puts "creating dir #{absolute_images_dir}" if DEBUG
+						FileUtils.mkdir_p(absolute_images_dir)
+					end
+					begin
+						puts "saving image to #{blog['source_dir']}/#{images_dir}/#{fn}" if DEBUG
+						File.open( "#{blog['source_dir']}/#{images_dir}/#{fn}", "w+b", 0644 ) { |f| f.write attachment.body.decoded }
+						files_to_commit << "source/#{images_dir}/#{fn}"
+					rescue Exception => e
+						$stderr.puts "Unable to save data for #{fn} because #{e.message}"
 					end
 				end
 			end
+					
+
+			#If the markup isn't html, try and use the
+			#text if it exists. Anything else, use the html
+			#version
+			if txt_part > -1 and keyvals[:markup] != 'html'
+				body = mail.parts[txt_part].body.decoded
+			elsif html_part > -1
+				body = mail.parts[html_part].body.decoded
+			end
+		else
+			#Just grab the body no matter what it is
+			body = mail.body.decoded
 		end
-		str << "---\n"
-		str << body
-	end
-	# if this isn't a draft move it over to the posts directory
-	unless keyvals[:published] == 'false'
-		FileUtils.mv(draft_filename, post_filename)
+
+		#If we have no body after all that, bail
+		exit if body.strip.empty?
+
+		#If it's html, run it through nokogiri to make sure it's clean
+		if keyvals[:markup] == 'html'
+			#body.gsub!(/[”“]/, '"')
+			#body.gsub!(/[‘’]/, "'")
+			body = Nokogiri::HTML::DocumentFragment.parse(body.strip).to_html
+		end
+		if (images_needing_replacement.length() > 0)
+			#TODO break this out into a method for testability
+			images_needing_replacement.each do | filename, path |
+				if keyvals[:markup] == 'markdown'
+					body.gsub!(/(\(|\]:\s|<)#{Regexp.escape(filename)}/, "\\1#{path}")
+				elsif keyvals[:markup] == 'textile'
+					body.gsub!(/!#{Regexp.escape(filename)}(!|\()/, "!#{path}\\1")
+				elsif keyvals[:markup] == 'html'
+					body.gsub!(/(src=(?:'|")|href=(?:'|"))#{Regexp.escape(filename)}/i, "\\1#{path}")
+					# WARNING: won't address urls in css
+					# Is case insensitive so it won't differentiatee FOO.jpg from foo.jpg or FoO.jpg
+					# people shouldn't be using the same name for different files anyway. :P
+				end
+			end
+		end
+
+		post_filename =  "#{blog['source_dir']}/#{blog['posts_dir']}/#{name}"
+
+		exit unless File.writable?("#{blog['source_dir']}/#{blog['posts_dir']}")
+		# First we want to try and successfully write everything to the filesystem
+		# We'll do this in the drafts directory
+		open(post_filename, 'w') do |str|
+			str << "---\n"
+			str << "title: '#{title}'\n"
+			str << "date: %02d-%02d-%02d %02d:%02d:%02d\n" % [time.year, time.month, time.day, time.hour, time.min, time.sec]
+			keyvals.keys.sort.each do |key|
+				if key != :tags  and key != :slug
+					str << "#{key}: #{keyvals[key]}\n"
+				elsif key == :tags
+					unless keyvals[:tags].empty?
+						str << "tags: \n"
+						keyvals[:tags].split(',').each do |string|
+							str << "- " + string.strip + "\n"
+						end
+					end
+				end
+			end
+			str << "---\n"
+			str << body
+		end
+		files_to_commit << post_filename
+
+		if blog['commit_after_save'] and files_to_commit.size() > 0
+			# NOTES for devs
+# @repo = Repo.new(blog['jekyll_repo'])
+#     index = @repo.index
+#     index.add('foo/bar/baz.txt', 'hello!')
+#     index.commit('first commit')
+	#	possibly Dir.chdir('repo/test.git') { jekyll_repo.add('foo.txt') }
+
+			#repo = Grit::Repo.new(blog['jekyll_repo'])
+			#parents = [repo.commits.first]
+			#index = repo.index
+			
+			Dir.chdir(blog['jekyll_repo']) #probably unnecessary
+			files_to_commit.each do |file|
+				relative_file_name = file.sub(/.*?source\//, 'source/')
+				puts "adding #{relative_file_name}" if DEBUG
+				#index.add(relative_file_name, open(file, "rb") {|io| io.read })
+							#repo_specific_file_name, binary_data
+				`git add #{relative_file_name}`
+			end
+			puts "committing" if DEBUG
+			#sha = index.commit("Adding post #{slug} via JekyllMail", parents, JEKYLLMAIL_USER, nil, blog['git_branch'])
+			#puts "sha = #{sha}" if DEBUG
+			`git commit -m "Adding post #{slug} via JekyllMail"`
+		end
+
+
 	end
 
+	Mail.delete_all() unless DEBUG
+		# when debugging it's much easier to just leave the emails there and re-use them
 
 end
-
-Mail.delete_all()
