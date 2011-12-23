@@ -23,6 +23,7 @@ require 'fileutils'
 
 
 DEBUG = false
+DELETE_AFTER_RUN = true
 
 #JEKYLLMAIL_USER= Actor.from_string("JekyllMail Script <jekyllmail@masukomi.org>")
 
@@ -46,7 +47,7 @@ blogs.each do | blog |
 
 	directory_keys.each do | key |
 		blog[key].sub!(/\/$/, '') # remove any trailing slashes from directory paths
-		puts "#{key}: #{blog[key]}"
+		puts "#{key}: #{blog[key]}" if DEBUG
 	end
 	blog['images_dir'] ||= 'images' #relative to site_url
 	blog['posts_dir'] ||= '_posts' #relative to source_dir
@@ -64,7 +65,7 @@ blogs.each do | blog |
 
 	if (emails.length == 0 )
 		puts "No Emails found" if DEBUG
-		exit 0
+		next #move on to the next blog's config
 	else
 		puts "#{emails.length} email(s) found" if DEBUG
 	end
@@ -246,7 +247,7 @@ blogs.each do | blog |
 
 	end
 
-	Mail.delete_all() unless DEBUG
+	Mail.delete_all() unless DEBUG == true or DELETE_AFTER_RUN == false
 		# when debugging it's much easier to just leave the emails there and re-use them
 
 end

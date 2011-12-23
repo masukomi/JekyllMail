@@ -13,6 +13,11 @@ Once it's placed those files there it will (optionally) also add them to your bl
 This will work even if it's a bare repo and the `source` directory you had it save files under 
 is in a detached worktree.
 
+Please note. JekyllMail assumes that the address it is checking 
+is *exclusively* for its use and will only be used to post emails 
+to a single blog. JekyllMail does support multiple blogs but you 
+will need a seperate e-mail account for each one.
+
 
 
 ## Usage ##
@@ -96,29 +101,40 @@ Your `pop_user` doesn't have to be an e-mail address. It might just be
 It all depends on how your server is configured. It's probably best to use
 something other than "jekyllmail" though. 
 
-## Cron Jobs ##
-You need to schedule two tasks to run regularly: JekyllMail itself, and 
-a script to kick-off the generation of new HTML files once JekyllMail has 
-done its job and commited the new files to your blog's git repo.
+## Wiring Things up ##
+You need to schedule a cronjob to run regularly to kick of JekyllMail 
+and check for new e-mails. 
 
-There are a variety of ways to accomplish this. The simplest way is 
-probably to create a shell script.
-
-To kick of JekyllMail it might look something like this:
+To kick of JekyllMail you'll want a script that looks something like this.
+You can use the `run_jekyllmail.sh` file that comes with JekyllMail as
+a template.
 
 	#!/bin/sh
 	cd /full/path/to/jekyllmail
 	bundle exec ruby jekyllmail.rb
 
-To kick off the generation of the new HTML you'll need a second 
-script like this: 
+
+Save the file anywhere that isn't served up to the public, make it executable, 
+and add a new line to your [crontab](http://crontab.org/) to run it every five 
+minutes or so. This is an example crontab line to do this
+
+	4,9,14,19,24,29,34,39,44,49,54,59    *    *    *    * /home/my_username/jekyllmail_repo/run_jekyllmail.sh
+
+When JekyllMail finds something it will save the files in the appropriate 
+locations and commit them to the appropriate git repo. When it does 
+we can leverage git's `hooks/post-commit` to regenerate the HTML 
+without needing to unnecessarily rebuild it on a regular interval.
+
+The `hooks/post-commit` file in your repo should look something like this.
+Don't forget to make it executable. You can use the `build_site.sh` file 
+that comes with JekyllMail as a templote.
 
 	#!/bin/sh
 	cd /full/path/to/blogs/worktree
 	bundle exec rake generate
 
 Depending on your server's ruby / gem configuration you may have to add some 
-additional info to the top of those ( just below the `#!/bin/sh` ). On a system 
+additional info to the top of those scirpts ( just below the `#!/bin/sh` ). On a system 
 with a locally installed RVM and gems directory the top of your script might 
 look something like this:
 
@@ -127,15 +143,8 @@ look something like this:
 	GEM_PATH=$GEM_PATH:/home/my_username/.gems
 	PATH=$PATH:/home/my_username/.gems/bin
 
-To help get you started check out the `run_jekyllmail.sh` and `build_site.sh` 
-scripts that come along with the repo.
-
 For more information on configuring Jekyll/Octopress to generate HTML server-side 
 see this post on [Serving Octopress from a Self-Hosted Git Repository](http://weblog.masukomi.org/2011/12/19/serving-octopress-from-a-self-hosted-git-repository/)
-
-Save the file anywhere that isn't served up to the public, make it executable, 
-and add a new line to your [crontab](http://crontab.org/) to run it every five 
-minutes or so. 
 
 
 ## Warning ##
@@ -149,6 +158,15 @@ This is for two reasons:
 
 Ok, four reasons.
 
+If you want to disable this set the `DELETE_AFTER_RUN` variable to false
+
+## Developers ##
+There is a `DEBUG` variable at the top of the script. Setting it to `true`
+will cause a bunch of debug statements to be printed during the run 
+and prevent it from deleting the e-mails at the end. It's much easier to 
+work on JekyllMail when you don't have to keep sending it new e-mails.
+
+Have fun, and remember to send in pull-requests. :)
 
 ### Known Issues ###
 Check out the [Issues page](https://github.com/masukomi/JekyllMail/issues) on 
