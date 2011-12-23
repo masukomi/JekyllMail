@@ -46,13 +46,13 @@ Image attachments will be extracted by JekyllMail and placed in dated directory
 that corresponds with the date of the posting.
 
 For example If you attached flag.jpg to a post sent on July 4th 2012 it would be 
-stored in <images_dir>/2012/07/04/flag.jpg
+stored in `<images_dir>/2012/07/04/flag.jpg`
 
 
 JekyllMail will look for the image tags in your document that reference the image 
 filename and update them to point to the correct published file path. For example 
 it will convert \!\[alt text\]\(flag.jpg\) in a Markdown document to 
-\!\[alt text\]\(http://example.com/path/to/images/dir/2012/07/04/flag.jpg\). 
+\!\[alt text\]\(http://example.com/path/to/images/dir/2012/07/04/flag.jpg). 
 Textile and HTML posts are also supported. 
 
 In practice this simply means that if you insert a \!\[alt text\]\(flag.jpg\) 
@@ -60,7 +60,7 @@ tag and attach an image named flag.jpg to the same email everything will
 show up as expected in your post even though JekyllMail has moved that image 
 off to a dated subdirectory (just like the post's url).
 
-## Installation ## 
+## Installation ##
 Checkout this git repo on your server, cd into the resulting directory, and 
 run `bundle install` to make sure all the required gems are present.
 
