@@ -132,20 +132,25 @@ blogs.each do | blog |
 			end
 
 			mail.attachments.each do |attachment|
+				#TODO: break this out into a separate method.
 				if (attachment.content_type.start_with?('image/'))
 					fn = attachment.filename
 					images_dir = blog['images_dir'] + ("/%02d/%02d/%02d" % [time.year, time.month, time.day])
-					absolute_images_dir = "#{blog['source_dir']}/#{images_dir}"
-					puts "absolute_images_dir: #{absolute_images_dir}"
+					local_images_dir = "#{blog['source_dir']}/#{images_dir}"
+					puts "local_images_dir: #{local_images_dir}"
 					images_needing_replacement[fn] = "#{blog['site_url']}/#{images_dir}/#{fn}"
 					puts "image url: #{images_needing_replacement[fn]}"
-					unless Dir.exists?(absolute_images_dir)
-						puts "creating dir #{absolute_images_dir}" if DEBUG
-						FileUtils.mkdir_p(absolute_images_dir)
+					unless Dir.exists?(local_images_dir)
+						puts "creating dir #{local_images_dir}" if DEBUG
+						FileUtils.mkdir_p(local_images_dir)
 					end
 					begin
-						puts "saving image to #{blog['source_dir']}/#{images_dir}/#{fn}" if DEBUG
-						File.open( "#{blog['source_dir']}/#{images_dir}/#{fn}", "w+b", 0644 ) { |f| f.write attachment.body.decoded }
+						local_filename = "#{blog['source_dir']}/#{images_dir}/#{fn}"
+						puts "saving image to #{local_filename}" if DEBUG
+						unless File.writable?(local_images_dir)
+							$stderr.puts("ERROR: #{local_images_dir} is unwritable. Exiting.")
+						end
+						File.open( local_filename, "w+b", 0644 ) { |f| f.write attachment.body.decoded }
 						files_to_commit << "source/#{images_dir}/#{fn}"
 					rescue Exception => e
 						$stderr.puts "Unable to save data for #{fn} because #{e.message}"
@@ -194,9 +199,12 @@ blogs.each do | blog |
 
 		post_filename =  "#{blog['source_dir']}/#{blog['posts_dir']}/#{name}"
 
-		exit unless File.writable?("#{blog['source_dir']}/#{blog['posts_dir']}")
-		# First we want to try and successfully write everything to the filesystem
-		# We'll do this in the drafts directory
+		if File.writable?("#{blog['source_dir']}/#{blog['posts_dir']}")
+			puts "saving post to #{post_filename}" if DEBUG
+		else
+			$stderr.puts "ERROR: #{blog['source_dir']}/#{blog['posts_dir']} is not writable"
+			exit 0
+		end
 		open(post_filename, 'w') do |str|
 			str << "---\n"
 			str << "title: '#{title}'\n"
