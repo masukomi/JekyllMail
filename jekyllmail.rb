@@ -31,7 +31,19 @@ directory_keys = ['jekyll_repo', 'source_dir', 'site_url']
 yaml = YAML::load(File.open('_config.yml'))
 @@globals[:debug] = true if yaml['debug']
 @@globals[:delete_after_run] = yaml['delete_after_run'] ? true : false
+@@globals[:log_file] = yaml['log_file']
 
+if (yaml['log_file'])
+	@@globals[:log_file] = File.open(yaml['log_file'], "a")
+end
+
+def log(message, write_to_file=false)
+	puts message if @@globals[:debug]
+	if @@globals[:debug] or (@@globals[:log_file] and write_to_file)
+		t = Time.now
+		@@globals[:log_file].puts "[#{t.strftime("%m/%d/%y %H:%M:%S")}] #{message}"
+	end
+end
 
 blogs = yaml['blogs']
 blogs.each do | blog | 
@@ -50,7 +62,7 @@ blogs.each do | blog |
 
 	directory_keys.each do | key |
 		blog[key].sub!(/\/$/, '') # remove any trailing slashes from directory paths
-		puts "#{key}: #{blog[key]}" if @@globals[:debug]
+		log( "#{key}: #{blog[key]}" )
 	end
 	blog['images_dir'] ||= 'images' #relative to site_url
 	blog['posts_dir'] ||= '_posts' #relative to source_dir
@@ -67,10 +79,10 @@ blogs.each do | blog |
 	emails = Mail.all
 
 	if (emails.length == 0 )
-		puts "No Emails found" if @@globals[:debug]
+		log( "No Emails found")
 		next #move on to the next blog's config
 	else
-		puts "#{emails.length} email(s) found" if @@globals[:debug]
+		log( "#{emails.length} email(s) found" )
 	end
 
 
@@ -80,7 +92,7 @@ blogs.each do | blog |
 		markup_extensions = {:html => 'html', :markdown => 'markdown', :md => 'markdown', :textile => 'textile', :txt => 'textile'}
 		keyvals = {:tags => '', :markup => blog['markup'], :slug => '', :published => true, :layout => 'post'}
 		subject = mail.subject
-		puts "processing email with subject: #{subject}" if @@globals[:debug]
+		log( "processing email with subject: #{subject}")
 
 		#If there is no working subject, bail
 		next if subject.empty?
@@ -101,7 +113,10 @@ blogs.each do | blog |
 		
 		
 		# if it doesn't contain the secret we can assume it to be spam
-		next unless keyvals[:secret] == blog['secret']
+		unless keyvals[:secret] == blog['secret']
+			log("skipping email with invalid / non-existent secret.\n\tSubject:#{subject}\n\tSecret: #{keyvals[:secret]}", true)
+			next
+		end
 
 		keyvals.delete(:secret) # we don't want that in the post's Frontmatter
 		slug = title.gsub(/[^[:alnum:]]+/, '-').downcase.strip.gsub(/\A\-+|\-+\z/, '')
@@ -144,12 +159,12 @@ blogs.each do | blog |
 					images_needing_replacement[fn] = "#{blog['site_url']}/#{images_dir}/#{fn}"
 					puts "image url: #{images_needing_replacement[fn]}"
 					unless Dir.exists?(local_images_dir)
-						puts "creating dir #{local_images_dir}" if @@globals[:debug]
+						log( "creating dir #{local_images_dir}")
 						FileUtils.mkdir_p(local_images_dir)
 					end
 					begin
 						local_filename = "#{blog['source_dir']}/#{images_dir}/#{fn}"
-						puts "saving image to #{local_filename}" if @@globals[:debug]
+						log("saving image to #{local_filename}")
 						unless File.writable?(local_images_dir)
 							$stderr.puts("ERROR: #{local_images_dir} is unwritable. Exiting.")
 						end
@@ -203,7 +218,7 @@ blogs.each do | blog |
 		post_filename =  "#{blog['source_dir']}/#{blog['posts_dir']}/#{name}"
 
 		if File.writable?("#{blog['source_dir']}/#{blog['posts_dir']}")
-			puts "saving post to #{post_filename}" if @@globals[:debug]
+			log("saving post to #{post_filename}")
 		else
 			$stderr.puts "ERROR: #{blog['source_dir']}/#{blog['posts_dir']} is not writable"
 			exit 0
@@ -228,7 +243,13 @@ blogs.each do | blog |
 			str << body
 		end
 		files_to_commit << post_filename
-
+		if files_to_commit.size() > 0
+			message = "ingested these files:"
+			files_to_commit.each do | f |
+				message += "\n\t#{f}"
+			end
+			log(message, true)
+		end
 		if blog['commit_after_save'] and files_to_commit.size() > 0
 			# NOTES for devs
 # @repo = Repo.new(blog['jekyll_repo'])
@@ -244,12 +265,12 @@ blogs.each do | blog |
 			Dir.chdir(blog['jekyll_repo']) #probably unnecessary
 			files_to_commit.each do |file|
 				relative_file_name = file.sub(/.*?source\//, 'source/')
-				puts "adding #{relative_file_name}" if @@globals[:debug]
+				log("adding #{relative_file_name}")
 				#index.add(relative_file_name, open(file, "rb") {|io| io.read })
 							#repo_specific_file_name, binary_data
 				`git add #{relative_file_name}`
 			end
-			puts "committing" if @@globals[:debug]
+			log("committing")
 			#sha = index.commit("Adding post #{slug} via JekyllMail", parents, JEKYLLMAIL_USER, nil, blog['git_branch'])
 			#puts "sha = #{sha}" if @@globals[:debug]
 			`git commit -m "Adding post #{slug} via JekyllMail"`
