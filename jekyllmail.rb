@@ -21,15 +21,18 @@ require 'fileutils'
 #require 'grit'
 #include Grit
 
-
-DEBUG = false
-DELETE_AFTER_RUN = true
+# The following constants can all be overridden in the config file
+@@globals={:debug=>false, :delete_after_run=>true}
 
 #JEKYLLMAIL_USER= Actor.from_string("JekyllMail Script <jekyllmail@masukomi.org>")
 
 
 directory_keys = ['jekyll_repo', 'source_dir', 'site_url']
 yaml = YAML::load(File.open('_config.yml'))
+@@globals[:debug] = true if yaml['debug']
+@@globals[:delete_after_run] = yaml['delete_after_run'] ? true : false
+
+
 blogs = yaml['blogs']
 blogs.each do | blog | 
 	# the blog hash contains
@@ -47,7 +50,7 @@ blogs.each do | blog |
 
 	directory_keys.each do | key |
 		blog[key].sub!(/\/$/, '') # remove any trailing slashes from directory paths
-		puts "#{key}: #{blog[key]}" if DEBUG
+		puts "#{key}: #{blog[key]}" if @@globals[:debug]
 	end
 	blog['images_dir'] ||= 'images' #relative to site_url
 	blog['posts_dir'] ||= '_posts' #relative to source_dir
@@ -64,10 +67,10 @@ blogs.each do | blog |
 	emails = Mail.all
 
 	if (emails.length == 0 )
-		puts "No Emails found" if DEBUG
+		puts "No Emails found" if @@globals[:debug]
 		next #move on to the next blog's config
 	else
-		puts "#{emails.length} email(s) found" if DEBUG
+		puts "#{emails.length} email(s) found" if @@globals[:debug]
 	end
 
 
@@ -77,7 +80,7 @@ blogs.each do | blog |
 		markup_extensions = {:html => 'html', :markdown => 'markdown', :md => 'markdown', :textile => 'textile', :txt => 'textile'}
 		keyvals = {:tags => '', :markup => blog['markup'], :slug => '', :published => true, :layout => 'post'}
 		subject = mail.subject
-		puts "processing email with subject: #{subject}" if DEBUG
+		puts "processing email with subject: #{subject}" if @@globals[:debug]
 
 		#If there is no working subject, bail
 		next if subject.empty?
@@ -141,12 +144,12 @@ blogs.each do | blog |
 					images_needing_replacement[fn] = "#{blog['site_url']}/#{images_dir}/#{fn}"
 					puts "image url: #{images_needing_replacement[fn]}"
 					unless Dir.exists?(local_images_dir)
-						puts "creating dir #{local_images_dir}" if DEBUG
+						puts "creating dir #{local_images_dir}" if @@globals[:debug]
 						FileUtils.mkdir_p(local_images_dir)
 					end
 					begin
 						local_filename = "#{blog['source_dir']}/#{images_dir}/#{fn}"
-						puts "saving image to #{local_filename}" if DEBUG
+						puts "saving image to #{local_filename}" if @@globals[:debug]
 						unless File.writable?(local_images_dir)
 							$stderr.puts("ERROR: #{local_images_dir} is unwritable. Exiting.")
 						end
@@ -200,7 +203,7 @@ blogs.each do | blog |
 		post_filename =  "#{blog['source_dir']}/#{blog['posts_dir']}/#{name}"
 
 		if File.writable?("#{blog['source_dir']}/#{blog['posts_dir']}")
-			puts "saving post to #{post_filename}" if DEBUG
+			puts "saving post to #{post_filename}" if @@globals[:debug]
 		else
 			$stderr.puts "ERROR: #{blog['source_dir']}/#{blog['posts_dir']} is not writable"
 			exit 0
@@ -241,21 +244,21 @@ blogs.each do | blog |
 			Dir.chdir(blog['jekyll_repo']) #probably unnecessary
 			files_to_commit.each do |file|
 				relative_file_name = file.sub(/.*?source\//, 'source/')
-				puts "adding #{relative_file_name}" if DEBUG
+				puts "adding #{relative_file_name}" if @@globals[:debug]
 				#index.add(relative_file_name, open(file, "rb") {|io| io.read })
 							#repo_specific_file_name, binary_data
 				`git add #{relative_file_name}`
 			end
-			puts "committing" if DEBUG
+			puts "committing" if @@globals[:debug]
 			#sha = index.commit("Adding post #{slug} via JekyllMail", parents, JEKYLLMAIL_USER, nil, blog['git_branch'])
-			#puts "sha = #{sha}" if DEBUG
+			#puts "sha = #{sha}" if @@globals[:debug]
 			`git commit -m "Adding post #{slug} via JekyllMail"`
 		end
 
 
 	end
 
-	Mail.delete_all() unless DEBUG == true or DELETE_AFTER_RUN == false
+	Mail.delete_all() unless @@globals[:debug] == true or  @@globals[:delete_after_run] == false
 		# when debugging it's much easier to just leave the emails there and re-use them
 
 end

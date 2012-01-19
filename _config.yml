@@ -9,3 +9,8 @@ blogs:
   markup: markdown
   site_url: http://blog.example.com
   commit_after_save: true
+  delete_after_run: true
+## Setting debug to true places the script 
+## in a debug state, which results in some verbose
+## output and overrides delete_after_run
+debug: false
