@@ -1,18 +1,43 @@
---- 
-blogs: 
-- jekyll_repo: /home/username/workspace/jekyll_test_site
-  source_dir: /home/username/workspace/jekyll_test_site/source
+---
+# log_file is optional. Simply leave it undefined to not log to a file
+log_file: /Users/masukomi/workspace/temp/jekyllmail.log
+## Setting debug to true places the script
+## in a debug state, which results in some verbose
+## output and overrides delete_after_run
+debug: true
+blogs:
+- name: my blog name
+  active: true
+  # set active: false to temporarily pause the ingestion
+  # of emails for this blog without having to disable
+  # the cron job
+  markup: markdown
+  jekyll_blog_dir: /Users/masukomi/workspace/jekyllmail_test_site
+  images_dir_under_jekyll: assets/img
+  posts_dir_under_jekyll: _posts
+  # SEE https://jekyllrb.com/docs/static-files/
+  # for details on how to configure where your static files live
+  # by default images are expected to be stored in
+  # <jekyll_site>/assets/img in jekyll
+  # so the default value for images_dir_under_site_url
+  # would be /assets/img because the web page would
+  # link to an image at https://<your_site_url>/assets/img/foo.jpg
+  images_dir_under_site_url: /assets/img
+
+  origin_repo_branch: master
+
+  local_repo: /Users/masukomi/workspace/jekyllmail_test_site
+    # typically this is a local repo that JekyllMail updates
+    # and pushes to an origin repo, but it can just be a local
+    # directory you want JekyllMail to store your files under.
+  origin_repo: /Users/masukomi/workspace/jekyllmail_test_site
+    # origin_repo could also be me@example.com:path/to/blog.git
+    # orign_repo_branch defaults to master
   pop_server: mail.example.com
   pop_user: jekyllmail@example.com
-  pop_password: password_here
+  pop_password: a_really_good_password_here
   secret: jekyllmail
   markup: markdown
   site_url: http://blog.example.com
   commit_after_save: true
   delete_after_run: true
-# log_file is optional. Simply leave it undefined to not log to a file
-log_file: /Users/masukomi/workspace/octopress_test_site/jekyllmail.log
-## Setting debug to true places the script 
-## in a debug state, which results in some verbose
-## output and overrides delete_after_run
-debug: false
