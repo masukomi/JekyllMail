@@ -9,14 +9,9 @@ a pre-defined secret in the subject line, convert them into appropriately named 
 save them in your `_posts` directory. Images will be extracted and saved in a date specific 
 directory under your `images` directory. 
 
-Once it's placed those files there it will (optionally) also add them to your blog's git repo. 
-This will work even if it's a bare repo and the `source` directory you had it save files under 
-is in a detached worktree.
+Once it's placed those files there it will (optionally) also add them to your blog's git repo.  This will work even if it's a bare repo and the `source` directory you had it save files under is in a detached worktree.
 
-Please note. JekyllMail assumes that the address it is checking 
-is *exclusively* for its use and will only be used to post emails 
-to a single blog. JekyllMail does support multiple blogs but you 
-will need a seperate e-mail account for each one.
+Please note. JekyllMail assumes that the address it is checking  is *exclusively* for its use and will only be used to post emails  to a single blog. JekyllMail does support multiple blogs but you  will need a seperate e-mail account for each one.
 
 
 
@@ -33,7 +28,7 @@ Your secret should be short, easy to remember, easy to type, and very unlikely t
 Your e-mail can be formatted in Markdown, Textile, or HTML.
 
 ### Subject Metadata ###
-There are a handful of keys that JekyllMail is specifically looking for in the subject.  
+Metadata is separated from your subject by a double pipe. There are a handful of keys that JekyllMail is specifically looking for in the subject.  
 **All of these are optional except "secret"**:
 
 * published: defaults to true. Set this to "false" to prevent the post from being published.
@@ -67,33 +62,36 @@ run `bundle install` to make sure all the required gems are present.
 
 ## Configuration ##
 JekyllMail is configured via a \_config.yml file in its root directory. 
-Within this are a series of "blog" stanzas one for each blog you'll have 
-it checking mail for. 
+Within this are a couple global settings and a series of "blog" stanzas one for each blog you'll have it checking mail for. 
 
-A single blog config file will look something like this
+A config file for a single blog will look something like this:
 
+	log_file: /home/path/to/jekyllmail.log
+	debug: false
 	blogs: 
-	- jekyll_repo: /full/path/to/jekyll/repo
-	  source_dir: /full/path/to/jekyll/source
+	- name: my blog name
+	  local_repo: my_blog
+	  origin_repo: /home/path/to/my/octopress_blog.git
 	  pop_server: mail.example.com
 	  pop_user: jekyllmail@example.com
-	  pop_password: mypassword
-	  secret: a_secret
+	  pop_password: password_here
+	  secret: jekyllmail
 	  markup: markdown
 	  site_url: http://blog.example.com
 	  commit_after_save: true
+	  delete_after_run: true
 
+
+### `local_repo` and `origin_repo`
+JekyllMail needs a non-bare git repo to write to. This is the `local_repo`. If  `commit_after_save` is set to true it will then push to `origin_repo` which can be a bare repo, or a separate non-bare repo with `receive.denyCurrentBranch` set to `ignore` or `warn`.  If you are ok with JekyllMail writing directly to your destination repo, you can simply delete the `origin_repo` line. If the `local_repo` and `origin_repo` are identical JekyllMail will not attempt to push since it would be pushing from a repo to itself. 
+	
 ### Configuration Notes ###
 The `secret` is a short piece of text that must appear in the subject of 
 each email. This is used to filter out the spam and will never be posted.
 
-If `commit_after_save` is true JekyllMail will add and commit any new post 
-and images to the repo specified in `jekyll_repo`.
+`local_repo` is where JekyllMail will store your files during its run. This will be automatically configured to push to `origin_repo` if `commit_after_save` and `origin_repo` are specified. Any new posts and images to the `local_repo` will be pushed to `origin_repo`, and then deleted after the run is complete.
 
-The `source_dir` must be the absolut paths to the directory containing 
-the `_posts` and `images` directories. JekyllMail does not 
-currently support a configuration where these directories live elsewhere.
-However, this is where 
+JekyllMail assumes a standard Jekyll / Octopress file structure. Posts will be stored under `source/_posts` and images under `source/images`. Consult the comments near the top of the `blog.rb` file if your setup does not conform to the standard.
 
 Please note that paths must *not* end with a slash.
 Your `pop_user` doesn't have to be an e-mail address. It might just be 
@@ -158,13 +156,11 @@ This is for two reasons:
 
 Ok, four reasons.
 
-If you want to disable this set the `DELETE_AFTER_RUN` variable to false
+If you want to disable this set the `delete_after_run` configuration setting to false.
 
 ## Developers ##
-There is a `DEBUG` variable at the top of the script. Setting it to `true`
-will cause a bunch of debug statements to be printed during the run 
-and prevent it from deleting the e-mails at the end. It's much easier to 
-work on JekyllMail when you don't have to keep sending it new e-mails.
+If you set the `debug` option at the top if the configuration file to `true`
+it will cause a bunch of debug statements to be printed during the run, and logged to the log file.  It will also prevent it from deleting the e-mails at the end. It's much easier to work on JekyllMail when you don't have to keep sending it new e-mails.
 
 Have fun, and remember to send in pull-requests. :)
 
@@ -173,8 +169,7 @@ Check out the [Issues page](https://github.com/masukomi/JekyllMail/issues) on
 Github for the current list of known issues (if any). 
 
 ## Credit where credit is due ##
-JekyllMail was based on a [post & gist](http://tedkulp.com/2011/05/18/send-email-to-jekyll/) 
-by [Ted Kulp](http://tedkulp.com/), but has come a long way since then.
+JekyllMail was based on a [post & gist](http://tedkulp.com/2011/05/18/send-email-to-jekyll/)  by [Ted Kulp](http://tedkulp.com/), but has come a long way since then.
 
 ## License ##
 JekyllMail is distributed under the [MIT License](http://www.opensource.org/licenses/mit-license.php).
