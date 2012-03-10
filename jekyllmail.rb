@@ -49,11 +49,11 @@ blogs.each do | blog_data |
 
 	#TODO break this out into its own class
 	Mail.defaults do
-	  retriever_method :pop3, :address    => blog.pop_server,
-							  :port       => 995,
-							  :user_name  => blog.pop_user,
-							  :password   => blog.pop_password,
-							  :enable_ssl => true
+	retriever_method :pop3, :address    => blog.pop_server,
+							:port       => 995,
+							:user_name  => blog.pop_user,
+							:password   => blog.pop_password,
+							:enable_ssl => true
 	end
 
 	emails = Mail.all
