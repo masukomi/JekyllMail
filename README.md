@@ -21,7 +21,9 @@ will need a seperate e-mail account for each one.
 
 
 ## Usage ##
-The magic is all in the subject line. In order to differentiate your email from the spam that's almost guaranteed to find your account eventually suck in the appropriate metadata A subject line for JekyllMail has two parts the title (of your post) and the metadata which will go into the YAML frontmatter Jekyll needs. The metadata is a series of key value pairs separated by slashes. One of those key value pairs *must* be "secret" and the secret listed in your configuration. Note that the keys must contain no spaces and be immediately followed by a colon. 
+The magic is all in the subject line. The subject line includes key-value pairs that let JekyllMail know how to categorize your email, and that it isn't spam. 
+
+A subject line for JekyllMail has two parts the title (of your post) and the metadata which will go into the YAML frontmatter Jekyll needs. The metadata is a series of key value pairs separated by slashes. One of those key value pairs *must* be "secret" and the secret listed in your configuration. Note that the keys must contain no spaces and be immediately followed by a colon. 
 
 	<subject> || key: value / key: value / key: value, value, value
 An example:
@@ -36,10 +38,10 @@ Your e-mail can be formatted in Markdown, Textile, or HTML.
 There are a handful of keys that JekyllMail is specifically looking for in the subject.  
 **All of these are optional except "secret"**:
 
-* published: defaults to true. Set this to "false" to prevent the post from being published.
-* markup: can be: html, markdown, md, textile, txt (textile)
-* tags: expects a comma separated list of tags for your post
-* slug: the "slug" for the file-name. E.g. yyyy-mm-dd-*slug*.extension 
+* `published:` defaults to true. Set this to "false" to prevent the post from being published.
+* `markup:` can be: html, markdown, md, textile, txt (textile)
+* `tags:` expects a comma separated list of tags for your post
+* `slug:` the "slug" for the file-name. E.g. yyyy-mm-dd-*slug*.extension 
 
 ### Images ###
 Image attachments will be extracted by JekyllMail and placed in dated directory 
@@ -90,10 +92,9 @@ each email. This is used to filter out the spam and will never be posted.
 If `commit_after_save` is true JekyllMail will add and commit any new post 
 and images to the repo specified in `jekyll_repo`.
 
-The `source_dir` must be the absolut paths to the directory containing 
+The `source_dir` must be the absolute paths to the directory containing 
 the `_posts` and `images` directories. JekyllMail does not 
 currently support a configuration where these directories live elsewhere.
-However, this is where 
 
 Please note that paths must *not* end with a slash.
 Your `pop_user` doesn't have to be an e-mail address. It might just be 
@@ -109,17 +110,20 @@ To kick of JekyllMail you'll want a script that looks something like this.
 You can use the `run_jekyllmail.sh` file that comes with JekyllMail as
 a template.
 
-	#!/bin/sh
-	cd /full/path/to/jekyllmail
-	bundle exec ruby jekyllmail.rb
+```bash
+#!/bin/sh
+cd /full/path/to/jekyllmail
+bundle exec ruby jekyllmail.rb
+```
 
 
 Save the file anywhere that isn't served up to the public, make it executable, 
 and add a new line to your [crontab](http://crontab.org/) to run it every five 
 minutes or so. This is an example crontab line to do this
 
-	4,9,14,19,24,29,34,39,44,49,54,59    *    *    *    * /home/my_username/jekyllmail_repo/run_jekyllmail.sh
-
+```
+4,9,14,19,24,29,34,39,44,49,54,59    *    *    *    * /home/my_username/jekyllmail_repo/run_jekyllmail.sh
+```
 When JekyllMail finds something it will save the files in the appropriate 
 locations and commit them to the appropriate git repo. When it does 
 we can leverage git's `hooks/post-commit` to regenerate the HTML 
